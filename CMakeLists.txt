@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(tarefa-conversor-AD tarefa-conversor-AD.c )
+add_executable(tarefa-conversor-AD tarefa-conversor-AD.c inc/ssd1306.c)
 
 pico_set_program_name(tarefa-conversor-AD "tarefa-conversor-AD")
 pico_set_program_version(tarefa-conversor-AD "0.1")
@@ -49,6 +49,7 @@ target_link_libraries(tarefa-conversor-AD
         pico_stdlib
         hardware_pwm
         hardware_adc
+        hardware_i2c
         )
 
 # Add the standard include files to the build
