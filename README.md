@@ -69,5 +69,5 @@ Este código implementa um sistema de controle baseado em joystick utilizando um
    - Atualiza a exibição do display OLED.
    - Aguarda 30ms antes da próxima iteração.
 
-#Link para youtube:
+# Link para youtube:
 https://youtu.be/NPsTL46-hC4?si=0PoIVnHL9X3sAfrC
