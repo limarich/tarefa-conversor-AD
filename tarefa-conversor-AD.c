@@ -25,6 +25,7 @@ uint border_style = 0;
 uint last_interrupt = 0;
 bool is_pwm_active = true;
 
+// configura a PWM
 void setup_pwm(uint gpio)
 {
     gpio_set_function(gpio, GPIO_FUNC_PWM);
@@ -35,6 +36,7 @@ void setup_pwm(uint gpio)
     pwm_set_enabled(slice, true);
 }
 
+// configura a I2C
 void setup_i2c()
 {
     i2c_init(I2C_PORT, 400 * 1000);
@@ -48,6 +50,8 @@ void setup_i2c()
     ssd1306_fill(&ssd, false);
     ssd1306_send_data(&ssd);
 }
+
+// configura o push button
 void setup_button(uint gpio)
 {
     gpio_init(gpio);
@@ -55,6 +59,7 @@ void setup_button(uint gpio)
     gpio_pull_up(gpio);
 }
 
+// obtem a leitura do joystick
 void get_joystick_position(uint *joystick_x, uint *joystick_y)
 {
     adc_select_input(0);
@@ -63,6 +68,7 @@ void get_joystick_position(uint *joystick_x, uint *joystick_y)
     *joystick_x = adc_read();
 }
 
+// Realiza o controle dos leds através das posições do joystick
 void update_leds_with_joystick(uint *joystick_x, uint *joystick_y, uint joystick_x_center, uint joystick_y_center)
 {
     uint pwm_y = 0, pwm_x = 0;
@@ -87,6 +93,7 @@ void update_leds_with_joystick(uint *joystick_x, uint *joystick_y, uint joystick
     pwm_set_gpio_level(LED_RED, pwm_x);
 }
 
+// gera uma borda de padrão aleatório
 void random_border()
 {
     for (uint x = 0; x < WIDTH; x++)
@@ -106,6 +113,7 @@ void random_border()
     }
 }
 
+// gera uma borda com um padrão bem definido
 void regular_border()
 {
     for (uint x = 0; x < WIDTH; x++)
@@ -121,6 +129,8 @@ void regular_border()
         ssd1306_pixel(&ssd, WIDTH - 1, y, 1);
     }
 }
+
+// remove qualquer borda que houver
 void none_border()
 {
     for (uint x = 0; x < WIDTH; x++)
@@ -136,6 +146,8 @@ void none_border()
         ssd1306_pixel(&ssd, WIDTH - 1, y, 0);
     }
 }
+
+// Faz uma borda animada que cresce e diminui
 void cool_border()
 {
     static uint size = 0;       // Controla o tamanho da expansão
@@ -172,7 +184,8 @@ void cool_border()
     }
 }
 
-void draw_border(uint display_y, uint display_x)
+// desenha o tipo de borda escolhido e o quadrado em movimento
+void draw_display(uint display_y, uint display_x)
 {
 
     switch (border_style)
@@ -190,10 +203,12 @@ void draw_border(uint display_y, uint display_x)
         none_border();
         break;
     }
+    // desenha o quadrado 8X8
     ssd1306_rect(&ssd, display_y, display_x, 8, 8, true, false);
     ssd1306_send_data(&ssd);
 }
 
+// gerencia as interrupções
 void handle_button_irq(uint gpio, uint32_t e)
 {
     uint current_time = to_ms_since_boot(get_absolute_time());
@@ -216,32 +231,41 @@ void handle_button_irq(uint gpio, uint32_t e)
             pwm_set_enabled(red_slice, is_pwm_active);
             pwm_set_enabled(blue_slice, is_pwm_active);
         }
-        }
+    }
 }
 
 int main()
 {
     stdio_init_all();
     adc_init();
+
+    // inicializa os pinos analógicos
     adc_gpio_init(JOYSTICK_Y_PIN);
     adc_gpio_init(JOYSTICK_X_PIN);
+
+    // inicializa os pinos pwmw
     setup_pwm(LED_RED);
     setup_pwm(LED_BLUE);
 
+    // faz a leitura inicial do joystick para fazer o ajuste do centro (calcula erro)
     adc_select_input(0);
     uint joystick_y_center = adc_read();
     adc_select_input(1);
     uint joystick_x_center = adc_read();
 
+    // configuração do display
     setup_i2c();
 
+    // inicializa o led verde
     gpio_init(LED_GREEN);
     gpio_set_dir(LED_GREEN, GPIO_OUT);
     gpio_put(LED_GREEN, 0);
 
+    // configuração dos botões
     setup_button(JOYSTICK_BUTTON);
     setup_button(BUTTON_A);
 
+    // habilita as interrupções
     gpio_set_irq_enabled_with_callback(JOYSTICK_BUTTON, GPIO_IRQ_EDGE_FALL, true, &handle_button_irq);
     gpio_set_irq_enabled(BUTTON_A, GPIO_IRQ_EDGE_FALL, true);
 
@@ -251,18 +275,21 @@ int main()
         float normalized_x, normalized_y = 0.0;
 
         get_joystick_position(&joystick_x, &joystick_y);
+        // faz a normalização da leitura do joystick entre 0 e 1
         normalized_x = joystick_x / 4095.0;
         normalized_y = joystick_y / 4095.0;
         printf("VX:%.2f VY:%.2f \n", normalized_x, normalized_y);
 
+        // ajusta a intensidade dos leds pwm
         update_leds_with_joystick(&joystick_x, &joystick_y, joystick_x_center, joystick_y_center);
 
+        // calcula a posição de exibição no display
         int display_x = (uint8_t)(WIDTH * normalized_x);
         int display_y = HEIGHT - (uint8_t)(HEIGHT * normalized_y);
 
         ssd1306_fill(&ssd, false);
 
-        draw_border(display_y, display_x);
+        draw_display(display_y, display_x);
 
         sleep_ms(30);
     }
